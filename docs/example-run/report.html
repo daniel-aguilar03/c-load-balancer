@@ -1,0 +1,526 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StreamGate experiment report</title><style>
+:root{color-scheme:dark}body{font:16px/1.6 system-ui,sans-serif;background:#101820;color:#e9f1f8;max-width:1100px;margin:48px auto;padding:0 24px}
+h1{font-size:36px;line-height:1.2}p{color:#b6c9d6}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:12px;text-align:left;border-bottom:1px solid #344453}
+th{color:#74e2c4}pre{white-space:pre-wrap;background:#172631;padding:20px;border-radius:12px;overflow-wrap:anywhere}.scroll{overflow:auto}a{color:#74e2c4}
+</style><h1>StreamGate / experiment report</h1><p>Generated 2026-10-27T14:58:33.164232+00:00 · event engine: epoll</p><p>Real TCP traffic through the C proxy. Clients verify every binary response. Latencies are application round trips on persistent connections.</p><div class="scroll"><table><thead><tr><th>Scenario</th><th>Clients</th><th>Messages</th><th>Errors</th><th>Msg/s</th><th>p50 ms</th><th>p95 ms</th><th>p99 ms</th></tr></thead><tbody><tr><td>all backends healthy</td><td>90</td><td>149423</td><td>0</td><td>99529.6</td><td>0.818</td><td>1.201</td><td>1.448</td></tr><tr><td>backend-2 crashed</td><td>90</td><td>166508</td><td>0</td><td>110921.3</td><td>0.77</td><td>1.101</td><td>1.75</td></tr><tr><td>backend-2 recovered</td><td>90</td><td>166040</td><td>0</td><td>110594.9</td><td>0.782</td><td>1.051</td><td>1.347</td></tr><tr><td>backend-3 delayed 20ms</td><td>90</td><td>170249</td><td>0</td><td>113362.9</td><td>0.508</td><td>0.835</td><td>21.055</td></tr></tbody></table></div><h2>Latency by backend</h2><p>Global percentiles can hide a slow backend in a closed-loop workload because slow clients complete fewer messages.</p><div class="scroll"><table><thead><tr><th>Scenario</th><th>Backend</th><th>p50 ms</th><th>p95 ms</th><th>p99 ms</th></tr></thead><tbody><tr><td>all backends healthy</td><td>backend-2</td><td>0.801</td><td>1.183</td><td>1.418</td></tr><tr><td>all backends healthy</td><td>backend-3</td><td>0.799</td><td>1.184</td><td>1.437</td></tr><tr><td>all backends healthy</td><td>backend-1</td><td>0.909</td><td>1.24</td><td>1.503</td></tr><tr><td>backend-2 crashed</td><td>backend-3</td><td>0.749</td><td>0.914</td><td>1.667</td></tr><tr><td>backend-2 crashed</td><td>backend-1</td><td>0.794</td><td>1.142</td><td>1.807</td></tr><tr><td>backend-2 recovered</td><td>backend-3</td><td>0.768</td><td>0.916</td><td>1.246</td></tr><tr><td>backend-2 recovered</td><td>backend-2</td><td>0.768</td><td>0.922</td><td>1.258</td></tr><tr><td>backend-2 recovered</td><td>backend-1</td><td>0.821</td><td>1.183</td><td>1.462</td></tr><tr><td>backend-3 delayed 20ms</td><td>backend-2</td><td>0.487</td><td>0.647</td><td>0.879</td></tr><tr><td>backend-3 delayed 20ms</td><td>backend-1</td><td>0.532</td><td>0.89</td><td>1.294</td></tr><tr><td>backend-3 delayed 20ms</td><td>backend-3</td><td>21.91</td><td>24.732</td><td>26.781</td></tr></tbody></table></div><h2>Experiment events</h2><ul><li>Killed backend-2; TCP health detection observed after 224.24 ms. Existing session interrupted as expected.</li><li>Application reconnect succeeded on backend-3; proxy does not replay requests.</li><li>Restarted backend-2; health checks returned it to rotation.</li><li>A backend with 20 ms application delay remains TCP-healthy; latency metrics expose the degradation.</li></ul><h2>Measurement limits</h2><p>Closed-loop clients run on the same machine as the proxy and backends. Results include Python, scheduling, and local networking costs. These are reproducible observations, not isolated proxy capacity or production guarantees. TCP probes establish connectivity only. Existing sessions are not migrated after backend failure.</p><h2>Full results</h2><pre>{
+  &quot;generated_at&quot;: &quot;2026-10-27T14:58:33.164232+00:00&quot;,
+  &quot;algorithm&quot;: &quot;roundrobin&quot;,
+  &quot;stages&quot;: [
+    {
+      &quot;name&quot;: &quot;all backends healthy&quot;,
+      &quot;result&quot;: {
+        &quot;clients&quot;: 90,
+        &quot;requested_duration_s&quot;: 1.5,
+        &quot;elapsed_s&quot;: 1.501,
+        &quot;payload_bytes&quot;: 256,
+        &quot;attempts&quot;: 149423,
+        &quot;successful_messages&quot;: 149423,
+        &quot;failed_operations&quot;: 0,
+        &quot;errors&quot;: {},
+        &quot;messages_per_second&quot;: 99529.6,
+        &quot;payload_mib_per_second_bidirectional&quot;: 48.598,
+        &quot;latency_ms&quot;: {
+          &quot;p50&quot;: 0.818,
+          &quot;p95&quot;: 1.201,
+          &quot;p99&quot;: 1.448,
+          &quot;max&quot;: 2.376
+        },
+        &quot;messages_by_backend&quot;: {
+          &quot;backend-2&quot;: 50983,
+          &quot;backend-3&quot;: 51040,
+          &quot;backend-1&quot;: 47400
+        },
+        &quot;connections_by_backend&quot;: {
+          &quot;backend-2&quot;: 30,
+          &quot;backend-3&quot;: 30,
+          &quot;backend-1&quot;: 30
+        },
+        &quot;latency_by_backend_ms&quot;: {
+          &quot;backend-2&quot;: {
+            &quot;p50&quot;: 0.801,
+            &quot;p95&quot;: 1.183,
+            &quot;p99&quot;: 1.418
+          },
+          &quot;backend-3&quot;: {
+            &quot;p50&quot;: 0.799,
+            &quot;p95&quot;: 1.184,
+            &quot;p99&quot;: 1.437
+          },
+          &quot;backend-1&quot;: {
+            &quot;p50&quot;: 0.909,
+            &quot;p95&quot;: 1.24,
+            &quot;p99&quot;: 1.503
+          }
+        },
+        &quot;request_cap&quot;: 200000,
+        &quot;cap_reached&quot;: false,
+        &quot;environment&quot;: {
+          &quot;system&quot;: &quot;Linux-6.10.14-linuxkit-aarch64-with-glibc2.36&quot;,
+          &quot;python&quot;: &quot;3.12.16&quot;
+        },
+        &quot;workload&quot;: &quot;closed-loop; one outstanding binary echo request per persistent connection; reconnect on failure&quot;
+      },
+      &quot;metrics&quot;: {
+        &quot;engine&quot;: &quot;epoll&quot;,
+        &quot;algorithm&quot;: &quot;roundrobin&quot;,
+        &quot;uptime_ms&quot;: 1697,
+        &quot;draining&quot;: false,
+        &quot;active&quot;: 0,
+        &quot;max_connections&quot;: 2048,
+        &quot;peak_active&quot;: 90,
+        &quot;accepted&quot;: 90,
+        &quot;completed&quot;: 90,
+        &quot;rejected&quot;: 0,
+        &quot;connect_errors&quot;: 0,
+        &quot;io_errors&quot;: 0,
+        &quot;idle_timeouts&quot;: 0,
+        &quot;connect_timeouts&quot;: 0,
+        &quot;forced_shutdowns&quot;: 0,
+        &quot;client_bytes_read&quot;: 38849980,
+        &quot;backend_bytes_read&quot;: 40344210,
+        &quot;backpressure_events&quot;: 0,
+        &quot;buffer_capacity_bytes&quot;: 0,
+        &quot;max_rss_bytes&quot;: 25485312,
+        &quot;cpu_seconds&quot;: 0.997152,
+        &quot;backends&quot;: [
+          {
+            &quot;address&quot;: &quot;127.0.0.1:40937&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 30,
+            &quot;up_transitions&quot;: 1,
+            &quot;down_transitions&quot;: 0
+          },
+          {
+            &quot;address&quot;: &quot;127.0.0.1:46379&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 30,
+            &quot;up_transitions&quot;: 1,
+            &quot;down_transitions&quot;: 0
+          },
+          {
+            &quot;address&quot;: &quot;127.0.0.1:32773&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 30,
+            &quot;up_transitions&quot;: 1,
+            &quot;down_transitions&quot;: 0
+          }
+        ]
+      }
+    },
+    {
+      &quot;name&quot;: &quot;backend-2 crashed&quot;,
+      &quot;result&quot;: {
+        &quot;clients&quot;: 90,
+        &quot;requested_duration_s&quot;: 1.5,
+        &quot;elapsed_s&quot;: 1.501,
+        &quot;payload_bytes&quot;: 256,
+        &quot;attempts&quot;: 166508,
+        &quot;successful_messages&quot;: 166508,
+        &quot;failed_operations&quot;: 0,
+        &quot;errors&quot;: {},
+        &quot;messages_per_second&quot;: 110921.3,
+        &quot;payload_mib_per_second_bidirectional&quot;: 54.161,
+        &quot;latency_ms&quot;: {
+          &quot;p50&quot;: 0.77,
+          &quot;p95&quot;: 1.101,
+          &quot;p99&quot;: 1.75,
+          &quot;max&quot;: 4.995
+        },
+        &quot;messages_by_backend&quot;: {
+          &quot;backend-3&quot;: 87818,
+          &quot;backend-1&quot;: 78690
+        },
+        &quot;connections_by_backend&quot;: {
+          &quot;backend-3&quot;: 45,
+          &quot;backend-1&quot;: 45
+        },
+        &quot;latency_by_backend_ms&quot;: {
+          &quot;backend-3&quot;: {
+            &quot;p50&quot;: 0.749,
+            &quot;p95&quot;: 0.914,
+            &quot;p99&quot;: 1.667
+          },
+          &quot;backend-1&quot;: {
+            &quot;p50&quot;: 0.794,
+            &quot;p95&quot;: 1.142,
+            &quot;p99&quot;: 1.807
+          }
+        },
+        &quot;request_cap&quot;: 200000,
+        &quot;cap_reached&quot;: false,
+        &quot;environment&quot;: {
+          &quot;system&quot;: &quot;Linux-6.10.14-linuxkit-aarch64-with-glibc2.36&quot;,
+          &quot;python&quot;: &quot;3.12.16&quot;
+        },
+        &quot;workload&quot;: &quot;closed-loop; one outstanding binary echo request per persistent connection; reconnect on failure&quot;
+      },
+      &quot;metrics&quot;: {
+        &quot;engine&quot;: &quot;epoll&quot;,
+        &quot;algorithm&quot;: &quot;roundrobin&quot;,
+        &quot;uptime_ms&quot;: 3471,
+        &quot;draining&quot;: false,
+        &quot;active&quot;: 0,
+        &quot;max_connections&quot;: 2048,
+        &quot;peak_active&quot;: 90,
+        &quot;accepted&quot;: 182,
+        &quot;completed&quot;: 182,
+        &quot;rejected&quot;: 0,
+        &quot;connect_errors&quot;: 0,
+        &quot;io_errors&quot;: 0,
+        &quot;idle_timeouts&quot;: 0,
+        &quot;connect_timeouts&quot;: 0,
+        &quot;forced_shutdowns&quot;: 0,
+        &quot;client_bytes_read&quot;: 82142131,
+        &quot;backend_bytes_read&quot;: 85301438,
+        &quot;backpressure_events&quot;: 0,
+        &quot;buffer_capacity_bytes&quot;: 0,
+        &quot;max_rss_bytes&quot;: 25485312,
+        &quot;cpu_seconds&quot;: 1.971016,
+        &quot;backends&quot;: [
+          {
+            &quot;address&quot;: &quot;127.0.0.1:40937&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 76,
+            &quot;up_transitions&quot;: 1,
+            &quot;down_transitions&quot;: 0
+          },
+          {
+            &quot;address&quot;: &quot;127.0.0.1:46379&quot;,
+            &quot;healthy&quot;: false,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 31,
+            &quot;up_transitions&quot;: 1,
+            &quot;down_transitions&quot;: 1
+          },
+          {
+            &quot;address&quot;: &quot;127.0.0.1:32773&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 75,
+            &quot;up_transitions&quot;: 1,
+            &quot;down_transitions&quot;: 0
+          }
+        ]
+      }
+    },
+    {
+      &quot;name&quot;: &quot;backend-2 recovered&quot;,
+      &quot;result&quot;: {
+        &quot;clients&quot;: 90,
+        &quot;requested_duration_s&quot;: 1.5,
+        &quot;elapsed_s&quot;: 1.501,
+        &quot;payload_bytes&quot;: 256,
+        &quot;attempts&quot;: 166040,
+        &quot;successful_messages&quot;: 166040,
+        &quot;failed_operations&quot;: 0,
+        &quot;errors&quot;: {},
+        &quot;messages_per_second&quot;: 110594.9,
+        &quot;payload_mib_per_second_bidirectional&quot;: 54.001,
+        &quot;latency_ms&quot;: {
+          &quot;p50&quot;: 0.782,
+          &quot;p95&quot;: 1.051,
+          &quot;p99&quot;: 1.347,
+          &quot;max&quot;: 3.311
+        },
+        &quot;messages_by_backend&quot;: {
+          &quot;backend-3&quot;: 57232,
+          &quot;backend-2&quot;: 57193,
+          &quot;backend-1&quot;: 51615
+        },
+        &quot;connections_by_backend&quot;: {
+          &quot;backend-3&quot;: 30,
+          &quot;backend-2&quot;: 30,
+          &quot;backend-1&quot;: 30
+        },
+        &quot;latency_by_backend_ms&quot;: {
+          &quot;backend-3&quot;: {
+            &quot;p50&quot;: 0.768,
+            &quot;p95&quot;: 0.916,
+            &quot;p99&quot;: 1.246
+          },
+          &quot;backend-2&quot;: {
+            &quot;p50&quot;: 0.768,
+            &quot;p95&quot;: 0.922,
+            &quot;p99&quot;: 1.258
+          },
+          &quot;backend-1&quot;: {
+            &quot;p50&quot;: 0.821,
+            &quot;p95&quot;: 1.183,
+            &quot;p99&quot;: 1.462
+          }
+        },
+        &quot;request_cap&quot;: 200000,
+        &quot;cap_reached&quot;: false,
+        &quot;environment&quot;: {
+          &quot;system&quot;: &quot;Linux-6.10.14-linuxkit-aarch64-with-glibc2.36&quot;,
+          &quot;python&quot;: &quot;3.12.16&quot;
+        },
+        &quot;workload&quot;: &quot;closed-loop; one outstanding binary echo request per persistent connection; reconnect on failure&quot;
+      },
+      &quot;metrics&quot;: {
+        &quot;engine&quot;: &quot;epoll&quot;,
+        &quot;algorithm&quot;: &quot;roundrobin&quot;,
+        &quot;uptime_ms&quot;: 5236,
+        &quot;draining&quot;: false,
+        &quot;active&quot;: 0,
+        &quot;max_connections&quot;: 2048,
+        &quot;peak_active&quot;: 90,
+        &quot;accepted&quot;: 273,
+        &quot;completed&quot;: 273,
+        &quot;rejected&quot;: 0,
+        &quot;connect_errors&quot;: 0,
+        &quot;io_errors&quot;: 0,
+        &quot;idle_timeouts&quot;: 0,
+        &quot;connect_timeouts&quot;: 0,
+        &quot;forced_shutdowns&quot;: 0,
+        &quot;client_bytes_read&quot;: 125312556,
+        &quot;backend_bytes_read&quot;: 130132273,
+        &quot;backpressure_events&quot;: 0,
+        &quot;buffer_capacity_bytes&quot;: 0,
+        &quot;max_rss_bytes&quot;: 25485312,
+        &quot;cpu_seconds&quot;: 3.051168,
+        &quot;backends&quot;: [
+          {
+            &quot;address&quot;: &quot;127.0.0.1:40937&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 106,
+            &quot;up_transitions&quot;: 1,
+            &quot;down_transitions&quot;: 0
+          },
+          {
+            &quot;address&quot;: &quot;127.0.0.1:46379&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 61,
+            &quot;up_transitions&quot;: 2,
+            &quot;down_transitions&quot;: 1
+          },
+          {
+            &quot;address&quot;: &quot;127.0.0.1:32773&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 106,
+            &quot;up_transitions&quot;: 1,
+            &quot;down_transitions&quot;: 0
+          }
+        ]
+      }
+    },
+    {
+      &quot;name&quot;: &quot;backend-3 delayed 20ms&quot;,
+      &quot;result&quot;: {
+        &quot;clients&quot;: 90,
+        &quot;requested_duration_s&quot;: 1.5,
+        &quot;elapsed_s&quot;: 1.502,
+        &quot;payload_bytes&quot;: 256,
+        &quot;attempts&quot;: 170249,
+        &quot;successful_messages&quot;: 170249,
+        &quot;failed_operations&quot;: 0,
+        &quot;errors&quot;: {},
+        &quot;messages_per_second&quot;: 113362.9,
+        &quot;payload_mib_per_second_bidirectional&quot;: 55.353,
+        &quot;latency_ms&quot;: {
+          &quot;p50&quot;: 0.508,
+          &quot;p95&quot;: 0.835,
+          &quot;p99&quot;: 21.055,
+          &quot;max&quot;: 26.872
+        },
+        &quot;messages_by_backend&quot;: {
+          &quot;backend-2&quot;: 93802,
+          &quot;backend-1&quot;: 74437,
+          &quot;backend-3&quot;: 2010
+        },
+        &quot;connections_by_backend&quot;: {
+          &quot;backend-2&quot;: 30,
+          &quot;backend-1&quot;: 30,
+          &quot;backend-3&quot;: 30
+        },
+        &quot;latency_by_backend_ms&quot;: {
+          &quot;backend-2&quot;: {
+            &quot;p50&quot;: 0.487,
+            &quot;p95&quot;: 0.647,
+            &quot;p99&quot;: 0.879
+          },
+          &quot;backend-1&quot;: {
+            &quot;p50&quot;: 0.532,
+            &quot;p95&quot;: 0.89,
+            &quot;p99&quot;: 1.294
+          },
+          &quot;backend-3&quot;: {
+            &quot;p50&quot;: 21.91,
+            &quot;p95&quot;: 24.732,
+            &quot;p99&quot;: 26.781
+          }
+        },
+        &quot;request_cap&quot;: 200000,
+        &quot;cap_reached&quot;: false,
+        &quot;environment&quot;: {
+          &quot;system&quot;: &quot;Linux-6.10.14-linuxkit-aarch64-with-glibc2.36&quot;,
+          &quot;python&quot;: &quot;3.12.16&quot;
+        },
+        &quot;workload&quot;: &quot;closed-loop; one outstanding binary echo request per persistent connection; reconnect on failure&quot;
+      },
+      &quot;metrics&quot;: {
+        &quot;engine&quot;: &quot;epoll&quot;,
+        &quot;algorithm&quot;: &quot;roundrobin&quot;,
+        &quot;uptime_ms&quot;: 7379,
+        &quot;draining&quot;: false,
+        &quot;active&quot;: 0,
+        &quot;max_connections&quot;: 2048,
+        &quot;peak_active&quot;: 90,
+        &quot;accepted&quot;: 363,
+        &quot;completed&quot;: 363,
+        &quot;rejected&quot;: 0,
+        &quot;connect_errors&quot;: 0,
+        &quot;io_errors&quot;: 0,
+        &quot;idle_timeouts&quot;: 0,
+        &quot;connect_timeouts&quot;: 0,
+        &quot;forced_shutdowns&quot;: 0,
+        &quot;client_bytes_read&quot;: 169577296,
+        &quot;backend_bytes_read&quot;: 176099503,
+        &quot;backpressure_events&quot;: 0,
+        &quot;buffer_capacity_bytes&quot;: 0,
+        &quot;max_rss_bytes&quot;: 25485312,
+        &quot;cpu_seconds&quot;: 4.058964,
+        &quot;backends&quot;: [
+          {
+            &quot;address&quot;: &quot;127.0.0.1:40937&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 136,
+            &quot;up_transitions&quot;: 1,
+            &quot;down_transitions&quot;: 0
+          },
+          {
+            &quot;address&quot;: &quot;127.0.0.1:46379&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 91,
+            &quot;up_transitions&quot;: 2,
+            &quot;down_transitions&quot;: 1
+          },
+          {
+            &quot;address&quot;: &quot;127.0.0.1:32773&quot;,
+            &quot;healthy&quot;: true,
+            &quot;active&quot;: 0,
+            &quot;selected&quot;: 136,
+            &quot;up_transitions&quot;: 2,
+            &quot;down_transitions&quot;: 1
+          }
+        ]
+      }
+    }
+  ],
+  &quot;events&quot;: [
+    &quot;Killed backend-2; TCP health detection observed after 224.24 ms. Existing session interrupted as expected.&quot;,
+    &quot;Application reconnect succeeded on backend-3; proxy does not replay requests.&quot;,
+    &quot;Restarted backend-2; health checks returned it to rotation.&quot;,
+    &quot;A backend with 20 ms application delay remains TCP-healthy; latency metrics expose the degradation.&quot;
+  ],
+  &quot;metrics&quot;: {
+    &quot;engine&quot;: &quot;epoll&quot;,
+    &quot;algorithm&quot;: &quot;roundrobin&quot;,
+    &quot;uptime_ms&quot;: 7380,
+    &quot;draining&quot;: false,
+    &quot;active&quot;: 0,
+    &quot;max_connections&quot;: 2048,
+    &quot;peak_active&quot;: 90,
+    &quot;accepted&quot;: 363,
+    &quot;completed&quot;: 363,
+    &quot;rejected&quot;: 0,
+    &quot;connect_errors&quot;: 0,
+    &quot;io_errors&quot;: 0,
+    &quot;idle_timeouts&quot;: 0,
+    &quot;connect_timeouts&quot;: 0,
+    &quot;forced_shutdowns&quot;: 0,
+    &quot;client_bytes_read&quot;: 169577296,
+    &quot;backend_bytes_read&quot;: 176099503,
+    &quot;backpressure_events&quot;: 0,
+    &quot;buffer_capacity_bytes&quot;: 0,
+    &quot;max_rss_bytes&quot;: 25485312,
+    &quot;cpu_seconds&quot;: 4.059035,
+    &quot;backends&quot;: [
+      {
+        &quot;address&quot;: &quot;127.0.0.1:40937&quot;,
+        &quot;healthy&quot;: true,
+        &quot;active&quot;: 0,
+        &quot;selected&quot;: 136,
+        &quot;up_transitions&quot;: 1,
+        &quot;down_transitions&quot;: 0
+      },
+      {
+        &quot;address&quot;: &quot;127.0.0.1:46379&quot;,
+        &quot;healthy&quot;: true,
+        &quot;active&quot;: 0,
+        &quot;selected&quot;: 91,
+        &quot;up_transitions&quot;: 2,
+        &quot;down_transitions&quot;: 1
+      },
+      {
+        &quot;address&quot;: &quot;127.0.0.1:32773&quot;,
+        &quot;healthy&quot;: true,
+        &quot;active&quot;: 0,
+        &quot;selected&quot;: 136,
+        &quot;up_transitions&quot;: 2,
+        &quot;down_transitions&quot;: 1
+      }
+    ]
+  },
+  &quot;final_metrics&quot;: {
+    &quot;engine&quot;: &quot;epoll&quot;,
+    &quot;algorithm&quot;: &quot;roundrobin&quot;,
+    &quot;uptime_ms&quot;: 7380,
+    &quot;draining&quot;: true,
+    &quot;active&quot;: 0,
+    &quot;max_connections&quot;: 2048,
+    &quot;peak_active&quot;: 90,
+    &quot;accepted&quot;: 363,
+    &quot;completed&quot;: 363,
+    &quot;rejected&quot;: 0,
+    &quot;connect_errors&quot;: 0,
+    &quot;io_errors&quot;: 0,
+    &quot;idle_timeouts&quot;: 0,
+    &quot;connect_timeouts&quot;: 0,
+    &quot;forced_shutdowns&quot;: 0,
+    &quot;client_bytes_read&quot;: 169577296,
+    &quot;backend_bytes_read&quot;: 176099503,
+    &quot;backpressure_events&quot;: 0,
+    &quot;buffer_capacity_bytes&quot;: 0,
+    &quot;max_rss_bytes&quot;: 25485312,
+    &quot;cpu_seconds&quot;: 4.059095,
+    &quot;backends&quot;: [
+      {
+        &quot;address&quot;: &quot;127.0.0.1:40937&quot;,
+        &quot;healthy&quot;: true,
+        &quot;active&quot;: 0,
+        &quot;selected&quot;: 136,
+        &quot;up_transitions&quot;: 1,
+        &quot;down_transitions&quot;: 0
+      },
+      {
+        &quot;address&quot;: &quot;127.0.0.1:46379&quot;,
+        &quot;healthy&quot;: true,
+        &quot;active&quot;: 0,
+        &quot;selected&quot;: 91,
+        &quot;up_transitions&quot;: 2,
+        &quot;down_transitions&quot;: 1
+      },
+      {
+        &quot;address&quot;: &quot;127.0.0.1:32773&quot;,
+        &quot;healthy&quot;: true,
+        &quot;active&quot;: 0,
+        &quot;selected&quot;: 136,
+        &quot;up_transitions&quot;: 2,
+        &quot;down_transitions&quot;: 1
+      }
+    ]
+  },
+  &quot;source_commit&quot;: &quot;b0e9e0e8f4765154ffb1366641b624e48fe9aab6&quot;,
+  &quot;execution_notes&quot;: &quot;Linux epoll in Docker Desktop on an Apple Silicon Mac; all clients, proxy, and backends share one Linux container. Not isolated proxy capacity.&quot;
+}</pre></html>
