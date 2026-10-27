@@ -1,0 +1,6 @@
+.git
+build
+reports
+work
+**/__pycache__
+.DS_Store

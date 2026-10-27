@@ -1,0 +1,49 @@
+name: streamgate
+x-backend: &backend
+  image: python:3.12-slim-bookworm
+  working_dir: /app
+  volumes:
+    - ./tools/backend.py:/app/backend.py:ro
+  init: true
+  healthcheck:
+    test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1',9001),1).close()"]
+    interval: 2s
+    timeout: 2s
+    retries: 10
+services:
+  backend-a:
+    <<: *backend
+    command: ["python", "backend.py", "--host", "0.0.0.0", "--port", "9001", "--name", "backend-a"]
+  backend-b:
+    <<: *backend
+    command: ["python", "backend.py", "--host", "0.0.0.0", "--port", "9001", "--name", "backend-b"]
+  backend-c:
+    <<: *backend
+    command: ["python", "backend.py", "--host", "0.0.0.0", "--port", "9001", "--name", "backend-c"]
+  proxy:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      backend-a:
+        condition: service_healthy
+      backend-b:
+        condition: service_healthy
+      backend-c:
+        condition: service_healthy
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    stop_grace_period: 8s
+  traffic:
+    image: python:3.12-slim-bookworm
+    profiles: ["tools"]
+    working_dir: /app
+    volumes:
+      - ./tools:/app/tools:ro
+      - ./reports:/app/reports
+    command: ["python", "tools/traffic.py", "--host", "proxy", "--clients", "60", "--duration", "5", "--wait-ready", "http://proxy:9090/ready", "--output", "reports/docker-traffic.json"]
+    depends_on:
+      - proxy
