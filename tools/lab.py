@@ -155,6 +155,11 @@ def write_report(directory, result):
         rows.append('<tr>' + ''.join(f'<td>{html.escape(str(v))}</td>' for v in [
             stage['name'], r['clients'], r['successful_messages'], r['failed_operations'],
             r['messages_per_second'], latency['p50'], latency['p95'], latency['p99']]) + '</tr>')
+    backend_rows = []
+    for stage in stages:
+        for name, latency in stage['result']['latency_by_backend_ms'].items():
+            backend_rows.append('<tr>' + ''.join(f'<td>{html.escape(str(v))}</td>' for v in [
+                stage['name'], name, latency['p50'], latency['p95'], latency['p99']]) + '</tr>')
     events = ''.join(f'<li>{html.escape(str(e))}</li>' for e in result.get('events', []))
     engine = result.get('metrics', {}).get('engine', 'unknown')
     page = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -166,6 +171,7 @@ th{color:#74e2c4}pre{white-space:pre-wrap;background:#172631;padding:20px;border
     page += f'<p>Generated {html.escape(result["generated_at"])} · event engine: {html.escape(engine)}</p>'
     page += '<p>Real TCP traffic through the C proxy. Clients verify every binary response. Latencies are application round trips on persistent connections.</p>'
     page += '<div class="scroll"><table><thead><tr>' + ''.join(f'<th>{h}</th>' for h in ['Scenario', 'Clients', 'Messages', 'Errors', 'Msg/s', 'p50 ms', 'p95 ms', 'p99 ms']) + '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table></div>'
+    page += '<h2>Latency by backend</h2><p>Global percentiles can hide a slow backend in a closed-loop workload because slow clients complete fewer messages.</p><div class="scroll"><table><thead><tr><th>Scenario</th><th>Backend</th><th>p50 ms</th><th>p95 ms</th><th>p99 ms</th></tr></thead><tbody>' + ''.join(backend_rows) + '</tbody></table></div>'
     page += '<h2>Experiment events</h2><ul>' + (events or '<li>No failure injection in this run.</li>') + '</ul>'
     page += '<h2>Measurement limits</h2><p>Closed-loop clients run on the same machine as the proxy and backends. Results include Python, scheduling, and local networking costs. These are reproducible observations, not isolated proxy capacity or production guarantees. TCP probes establish connectivity only. Existing sessions are not migrated after backend failure.</p>'
     page += '<h2>Full results</h2><pre>' + html.escape(json.dumps(result, indent=2)) + '</pre></html>'
@@ -261,6 +267,8 @@ def main():
     try:
         with lab:
             print(f'Proxy 127.0.0.1:{lab.proxy_port} | metrics http://127.0.0.1:{lab.admin_port}/metrics', flush=True)
+            for i, process in enumerate(lab.backends):
+                print(f'backend-{i + 1}: 127.0.0.1:{lab.backend_ports[i]} PID={process.pid}', flush=True)
             if args.command == 'serve':
                 print('Ctrl+C drains connections and stops all lab processes.', flush=True)
                 while True:

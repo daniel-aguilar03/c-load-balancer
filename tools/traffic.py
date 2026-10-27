@@ -62,6 +62,8 @@ async def benchmark(host='127.0.0.1', port=8080, clients=100, duration=5,
                     if writer is None:
                         reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout)
                         first_request = True
+                    if attempts >= request_limit or time.perf_counter() >= deadline:
+                        break
                     attempts += 1
                     sequence += 1
                     payload = struct.pack('!QQ', index, sequence) + random_body
