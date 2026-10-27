@@ -1,0 +1,9 @@
+build/
+__pycache__/
+*.py[cod]
+.DS_Store
+reports/*
+!reports/.gitkeep
+core
+core.*
+.env
